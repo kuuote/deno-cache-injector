@@ -15,7 +15,7 @@ import { walkSync } from "https://deno.land/std@0.95.0/fs/walk.ts";
 type ScriptLocation = {
   protocol: string;
   host: string;
-  port: string | undefined;
+  port?: string;
   rest: string;
 };
 
