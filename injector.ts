@@ -108,7 +108,10 @@ async function main(args: string[]): Promise<number> {
     console.log("");
     return 1;
   }
-  await process(args[0], args[1]);
+  const target = args[0];
+  const prefix = args[1];
+  await process(target, prefix);
+  console.log(`All JavaScript/TypeScript files for ${prefix} in the cache are replaced to files in ${target}`);
   return 0;
 }
 
