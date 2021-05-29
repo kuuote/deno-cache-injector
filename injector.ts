@@ -1,6 +1,6 @@
 import { createHash } from "https://deno.land/std@0.95.0/hash/mod.ts";
-import { ensureDirSync } from "https://deno.land/std@0.95.0/fs/ensure_dir.ts";
-import { walkSync } from "https://deno.land/std@0.95.0/fs/walk.ts";
+import { ensureDir } from "https://deno.land/std@0.95.0/fs/ensure_dir.ts";
+import { walk } from "https://deno.land/std@0.95.0/fs/walk.ts";
 
 /*
  * Deno cache injector
@@ -15,22 +15,11 @@ import { walkSync } from "https://deno.land/std@0.95.0/fs/walk.ts";
 type ScriptLocation = {
   protocol: string;
   host: string;
-  port: string | undefined;
+  port?: string;
   rest: string;
 };
 
-if (Deno.args.length !== 2) {
-  const scriptName = import.meta.url.replace(/.*\//, "");
-  console.log(
-    `Usage: deno run --allow-env --allow-read --allow-write ${scriptName} <library path> <url prefix>`,
-  );
-  console.log("Example:");
-  console.log("\tlibrary path: deno_std");
-  console.log("\turl prefix: https://deno.land/std@0.95.0");
-  Deno.exit(1);
-}
-
-const parseURL = (url: string): ScriptLocation => {
+function parseURL(url: string): ScriptLocation {
   const parsed = url.match(/(\w+):\/\/([^:\/]+)(?::(\d+))?(.*)/);
   if (!parsed) {
     throw new Error(`Malformed URL '${url}'`);
@@ -41,9 +30,10 @@ const parseURL = (url: string): ScriptLocation => {
     port: parsed[3],
     rest: parsed[4],
   };
-};
+}
 
-const denoDir = () => {
+async function getCacheDir() {
+  await Deno.permissions.request({ name: "env" });
   switch (Deno.build.os) {
     case "linux":
       return Deno.env.get("XDG_CACHE_HOME") ??
@@ -51,13 +41,16 @@ const denoDir = () => {
     case "darwin":
       return Deno.env.get("HOME") + "/Library/Caches";
   }
-};
+}
 
-const depsDir = denoDir() + "/deno/deps";
+async function process(target: string, prefix: string) {
+  const depsDir = await getCacheDir() + "/deno/deps";
 
-const process = (target: string, prefix: string) => {
+  await Deno.permissions.request({ name: "read" });
+  await Deno.permissions.request({ name: "write" });
+
   Deno.chdir(target);
-  for (const e of walkSync(".")) {
+  for await (const e of walk(".")) {
     if (!e.isFile || !(e.path.endsWith("js") || e.path.endsWith("ts"))) {
       continue;
     }
@@ -66,14 +59,14 @@ const process = (target: string, prefix: string) => {
     const loc = parseURL(url);
     const host = loc.host + (loc.port ? "_PORT" + loc.port : "");
     const dir = `${depsDir}/${loc.protocol}/${host}`;
-    ensureDirSync(dir);
+    await ensureDir(dir);
 
     const hasher = createHash("sha256");
     hasher.update(loc.rest);
     const path = `${dir}/${hasher}`;
-    Deno.copyFileSync(e.path, path);
+    await Deno.copyFile(e.path, path);
     const mpath = path + ".metadata.json";
-    Deno.writeTextFileSync(
+    await Deno.writeTextFile(
       mpath,
       JSON.stringify({
         headers: {},
@@ -81,6 +74,45 @@ const process = (target: string, prefix: string) => {
       }),
     );
   }
-};
+}
 
-process(Deno.args[0], Deno.args[1]);
+async function main(args: string[]): Promise<number> {
+  if (args.length !== 2) {
+    const scriptName = import.meta.url.replace(/.*\//, "");
+    console.log("deno cache injector");
+    console.log(
+      "Replace JavaScript/TypeScript files in the cache to files in the particular directory",
+    );
+    console.log("");
+    console.log("To use files in <libpath> for <liburl>:");
+    console.log("");
+    console.log(
+      `  deno run ${scriptName} ./denops-std-deno https://deno.land/x/denops_std@v0.10`,
+    );
+    console.log("");
+    console.log("USAGE:");
+    console.log(`  deno run ${scriptName} <libpath> <liburl>`);
+    console.log("");
+    console.log("ARGUMENTS:");
+    console.log(
+      "  <libpath>    A local directory path which is used to replace the cache",
+    );
+    console.log(
+      "  <liburl>     A base URL of a library in the cache to replace",
+    );
+    console.log("");
+    console.log("PERMISSIONS:");
+    console.log("  --allow-env");
+    console.log("  --allow-read");
+    console.log("  --allow-write");
+    console.log("");
+    return 1;
+  }
+  const target = args[0];
+  const prefix = args[1];
+  await process(target, prefix);
+  console.log(`All JavaScript/TypeScript files for ${prefix} in the cache are replaced to files in ${target}`);
+  return 0;
+}
+
+Deno.exit(await main(Deno.args));
