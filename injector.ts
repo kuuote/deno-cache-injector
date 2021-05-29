@@ -19,17 +19,6 @@ type ScriptLocation = {
   rest: string;
 };
 
-if (Deno.args.length !== 2) {
-  const scriptName = import.meta.url.replace(/.*\//, "");
-  console.log(
-    `Usage: deno run --allow-env --allow-read --allow-write ${scriptName} <library path> <url prefix>`,
-  );
-  console.log("Example:");
-  console.log("\tlibrary path: deno_std");
-  console.log("\turl prefix: https://deno.land/std@0.95.0");
-  Deno.exit(1);
-}
-
 function parseURL(url: string): ScriptLocation {
   const parsed = url.match(/(\w+):\/\/([^:\/]+)(?::(\d+))?(.*)/);
   if (!parsed) {
@@ -83,4 +72,19 @@ async function process(target: string, prefix: string) {
   }
 }
 
-process(Deno.args[0], Deno.args[1]);
+async function main(args: string[]): Promise<number> {
+  if (args.length !== 2) {
+    const scriptName = import.meta.url.replace(/.*\//, "");
+    console.log(
+      `Usage: deno run --allow-env --allow-read --allow-write ${scriptName} <library path> <url prefix>`,
+    );
+    console.log("Example:");
+    console.log("\tlibrary path: deno_std");
+    console.log("\turl prefix: https://deno.land/std@0.95.0");
+    return 1;
+  }
+  await process(args[0], args[1]);
+  return 0;
+}
+
+Deno.exit(await main(Deno.args));
