@@ -32,7 +32,7 @@ function parseURL(url: string): ScriptLocation {
   };
 }
 
-function denoDir() {
+function getCacheDir() {
   switch (Deno.build.os) {
     case "linux":
       return Deno.env.get("XDG_CACHE_HOME") ??
@@ -42,9 +42,9 @@ function denoDir() {
   }
 }
 
-const depsDir = denoDir() + "/deno/deps";
-
 async function process(target: string, prefix: string) {
+  const depsDir = getCacheDir() + "/deno/deps";
+
   Deno.chdir(target);
   for await (const e of walk(".")) {
     if (!e.isFile || !(e.path.endsWith("js") || e.path.endsWith("ts"))) {
