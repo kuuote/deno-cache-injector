@@ -2,7 +2,7 @@ This script will replace JavaScript/TypeScript files in the cache to files in th
 
 # Install
 
-`$ deno install -n deno-cache-injector --allow-env --allow-read --allow-write https://raw.githubusercontent.com/kuuote/deno-cache-injector/main/injector.ts`
+`$ deno install -n deno-cache-injector --allow-env --allow-read --allow-write https://deno.land/x/cache-injector@1.0.0/main/injector.ts`
 
 # Permissions
 
