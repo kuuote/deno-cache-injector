@@ -32,7 +32,8 @@ function parseURL(url: string): ScriptLocation {
   };
 }
 
-function getCacheDir() {
+async function getCacheDir() {
+  await Deno.permissions.request({ name: "env" });
   switch (Deno.build.os) {
     case "linux":
       return Deno.env.get("XDG_CACHE_HOME") ??
@@ -43,7 +44,10 @@ function getCacheDir() {
 }
 
 async function process(target: string, prefix: string) {
-  const depsDir = getCacheDir() + "/deno/deps";
+  const depsDir = await getCacheDir() + "/deno/deps";
+
+  await Deno.permissions.request({ name: "read" });
+  await Deno.permissions.request({ name: "write" });
 
   Deno.chdir(target);
   for await (const e of walk(".")) {
