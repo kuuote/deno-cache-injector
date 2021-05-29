@@ -49,7 +49,7 @@ const denoDir = () => {
       return Deno.env.get("XDG_CACHE_HOME") ??
         Deno.env.get("HOME") + "/.cache";
     case "darwin":
-      return Deno.env.get("HOME") + "/Library/Cache";
+      return Deno.env.get("HOME") + "/Library/Caches";
   }
 };
 
