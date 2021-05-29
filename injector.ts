@@ -75,12 +75,33 @@ async function process(target: string, prefix: string) {
 async function main(args: string[]): Promise<number> {
   if (args.length !== 2) {
     const scriptName = import.meta.url.replace(/.*\//, "");
+    console.log("deno cache injector");
     console.log(
-      `Usage: deno run --allow-env --allow-read --allow-write ${scriptName} <library path> <url prefix>`,
+      "Replace JavaScript/TypeScript files in the cache to files in the particular directory",
     );
-    console.log("Example:");
-    console.log("\tlibrary path: deno_std");
-    console.log("\turl prefix: https://deno.land/std@0.95.0");
+    console.log("");
+    console.log("To use files in <libpath> for <liburl>:");
+    console.log("");
+    console.log(
+      `  deno run ${scriptName} ./denops-std-deno https://deno.land/x/denops_std@v0.10`,
+    );
+    console.log("");
+    console.log("USAGE:");
+    console.log(`  deno run ${scriptName} <libpath> <liburl>`);
+    console.log("");
+    console.log("ARGUMENTS:");
+    console.log(
+      "  <libpath>    A local directory path which is used to replace the cache",
+    );
+    console.log(
+      "  <liburl>     A base URL of a library in the cache to replace",
+    );
+    console.log("");
+    console.log("PERMISSIONS:");
+    console.log("  --allow-env");
+    console.log("  --allow-read");
+    console.log("  --allow-write");
+    console.log("");
     return 1;
   }
   await process(args[0], args[1]);
