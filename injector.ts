@@ -1,6 +1,6 @@
 import { createHash } from "https://deno.land/std@0.95.0/hash/mod.ts";
-import { ensureDirSync } from "https://deno.land/std@0.95.0/fs/ensure_dir.ts";
-import { walkSync } from "https://deno.land/std@0.95.0/fs/walk.ts";
+import { ensureDir } from "https://deno.land/std@0.95.0/fs/ensure_dir.ts";
+import { walk } from "https://deno.land/std@0.95.0/fs/walk.ts";
 
 /*
  * Deno cache injector
@@ -55,9 +55,9 @@ function denoDir() {
 
 const depsDir = denoDir() + "/deno/deps";
 
-function process(target: string, prefix: string) {
+async function process(target: string, prefix: string) {
   Deno.chdir(target);
-  for (const e of walkSync(".")) {
+  for await (const e of walk(".")) {
     if (!e.isFile || !(e.path.endsWith("js") || e.path.endsWith("ts"))) {
       continue;
     }
@@ -66,14 +66,14 @@ function process(target: string, prefix: string) {
     const loc = parseURL(url);
     const host = loc.host + (loc.port ? "_PORT" + loc.port : "");
     const dir = `${depsDir}/${loc.protocol}/${host}`;
-    ensureDirSync(dir);
+    await ensureDir(dir);
 
     const hasher = createHash("sha256");
     hasher.update(loc.rest);
     const path = `${dir}/${hasher}`;
-    Deno.copyFileSync(e.path, path);
+    await Deno.copyFile(e.path, path);
     const mpath = path + ".metadata.json";
-    Deno.writeTextFileSync(
+    await Deno.writeTextFile(
       mpath,
       JSON.stringify({
         headers: {},
