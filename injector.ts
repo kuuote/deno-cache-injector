@@ -1,6 +1,9 @@
 import { createHash } from "https://deno.land/std@0.95.0/hash/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.95.0/fs/ensure_dir.ts";
 import { walk } from "https://deno.land/std@0.95.0/fs/walk.ts";
+import { exists } from "https://deno.land/std@0.95.0/fs/exists.ts";
+import { resolve } from "https://deno.land/std@0.95.0/path/posix.ts";
+import { parse as parseArgs } from "https://deno.land/std@0.95.0/flags/mod.ts";
 
 /*
  * Deno cache injector
@@ -17,6 +20,12 @@ type ScriptLocation = {
   host: string;
   port?: string;
   rest: string;
+};
+
+type Option = {
+  delete: boolean;
+  useSymlink: boolean;
+  verbose: boolean;
 };
 
 function parseURL(url: string): ScriptLocation {
@@ -43,7 +52,7 @@ async function getCacheDir() {
   }
 }
 
-async function process(target: string, prefix: string) {
+async function process(target: string, prefix: string, option: Option) {
   const depsDir = await getCacheDir() + "/deno/deps";
 
   await Deno.permissions.request({ name: "read" });
@@ -63,9 +72,31 @@ async function process(target: string, prefix: string) {
 
     const hasher = createHash("sha256");
     hasher.update(loc.rest);
-    const path = `${dir}/${hasher}`;
-    await Deno.copyFile(e.path, path);
-    const mpath = path + ".metadata.json";
+
+    const fromPath = resolve(e.path);
+    const destPath = `${dir}/${hasher}`;
+
+    if (await exists(destPath)) {
+      await Deno.remove(destPath);
+      if (option.verbose) {
+        console.log(`delete: ${destPath}`);
+      }
+    }
+    if (option.delete) {
+      return;
+    }
+    if (option.useSymlink) {
+      await Deno.symlink(fromPath, destPath);
+    } else {
+      await Deno.copyFile(e.path, destPath);
+    }
+    if (option.verbose) {
+      console.log(
+        `${option.useSymlink ? "link" : "copy"}: ${fromPath} => ${destPath}`,
+      );
+    }
+
+    const mpath = destPath + ".metadata.json";
     await Deno.writeTextFile(
       mpath,
       JSON.stringify({
@@ -77,7 +108,10 @@ async function process(target: string, prefix: string) {
 }
 
 async function main(args: string[]): Promise<number> {
-  if (args.length !== 2) {
+  const parsed = parseArgs(args, {
+    boolean: ["d", "s", "v"],
+  });
+  if (parsed._.length !== 2) {
     const scriptName = import.meta.url.replace(/.*\//, "");
     console.log("deno cache injector");
     console.log(
@@ -91,7 +125,14 @@ async function main(args: string[]): Promise<number> {
     );
     console.log("");
     console.log("USAGE:");
-    console.log(`  deno run ${scriptName} <libpath> <liburl>`);
+    console.log(`  deno run ${scriptName} <option>... <libpath> <liburl>`);
+    console.log("");
+    console.log("OPTIONS:");
+    console.log(
+      "  -d           Delete cache (Only files that exists in <libpath>)",
+    );
+    console.log("  -s           Use symbolic link");
+    console.log("  -v           Display verbose log");
     console.log("");
     console.log("ARGUMENTS:");
     console.log(
@@ -108,10 +149,17 @@ async function main(args: string[]): Promise<number> {
     console.log("");
     return 1;
   }
-  const target = args[0];
-  const prefix = args[1];
-  await process(target, prefix);
-  console.log(`All JavaScript/TypeScript files for ${prefix} in the cache are replaced to files in ${target}`);
+  const target = parsed._[0].toString();
+  const prefix = parsed._[1].toString();
+  const option = {
+    delete: parsed.d,
+    useSymlink: parsed.s,
+    verbose: parsed.v,
+  };
+  await process(target, prefix, option);
+  console.log(
+    `All JavaScript/TypeScript files for ${prefix} in the cache are replaced to files in ${target}`,
+  );
   return 0;
 }
 
