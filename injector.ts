@@ -30,7 +30,7 @@ if (Deno.args.length !== 2) {
   Deno.exit(1);
 }
 
-const parseURL = (url: string): ScriptLocation => {
+function parseURL(url: string): ScriptLocation {
   const parsed = url.match(/(\w+):\/\/([^:\/]+)(?::(\d+))?(.*)/);
   if (!parsed) {
     throw new Error(`Malformed URL '${url}'`);
@@ -41,9 +41,9 @@ const parseURL = (url: string): ScriptLocation => {
     port: parsed[3],
     rest: parsed[4],
   };
-};
+}
 
-const denoDir = () => {
+function denoDir() {
   switch (Deno.build.os) {
     case "linux":
       return Deno.env.get("XDG_CACHE_HOME") ??
@@ -51,11 +51,11 @@ const denoDir = () => {
     case "darwin":
       return Deno.env.get("HOME") + "/Library/Caches";
   }
-};
+}
 
 const depsDir = denoDir() + "/deno/deps";
 
-const process = (target: string, prefix: string) => {
+function process(target: string, prefix: string) {
   Deno.chdir(target);
   for (const e of walkSync(".")) {
     if (!e.isFile || !(e.path.endsWith("js") || e.path.endsWith("ts"))) {
@@ -81,6 +81,6 @@ const process = (target: string, prefix: string) => {
       }),
     );
   }
-};
+}
 
 process(Deno.args[0], Deno.args[1]);
