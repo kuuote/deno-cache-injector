@@ -1,9 +1,9 @@
-import { createHash } from "https://deno.land/std@0.95.0/hash/mod.ts";
-import { ensureDir } from "https://deno.land/std@0.95.0/fs/ensure_dir.ts";
-import { walk } from "https://deno.land/std@0.95.0/fs/walk.ts";
-import { exists } from "https://deno.land/std@0.95.0/fs/exists.ts";
-import { resolve } from "https://deno.land/std@0.95.0/path/posix.ts";
-import { parse as parseArgs } from "https://deno.land/std@0.95.0/flags/mod.ts";
+import { createHash } from "https://deno.land/std@0.108.0/hash/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.108.0/fs/ensure_dir.ts";
+import { walk } from "https://deno.land/std@0.108.0/fs/walk.ts";
+import { exists } from "https://deno.land/std@0.108.0/fs/exists.ts";
+import { resolve } from "https://deno.land/std@0.108.0/path/posix.ts";
+import { parse as parseArgs } from "https://deno.land/std@0.108.0/flags/mod.ts";
 
 /*
  * Deno cache injector
@@ -41,19 +41,23 @@ function parseURL(url: string): ScriptLocation {
   };
 }
 
-async function getCacheDir() {
+export async function getDenoDir() {
   await Deno.permissions.request({ name: "env" });
+  const denoDir = Deno.env.get("DENO_DIR");
+  if (denoDir) {
+    return denoDir;
+  }
   switch (Deno.build.os) {
     case "linux":
-      return Deno.env.get("XDG_CACHE_HOME") ??
-        Deno.env.get("HOME") + "/.cache";
+      return (Deno.env.get("XDG_CACHE_HOME") ??
+        Deno.env.get("HOME") + "/.cache") + "/deno";
     case "darwin":
-      return Deno.env.get("HOME") + "/Library/Caches";
+      return Deno.env.get("HOME") + "/Library/Caches/deno";
   }
 }
 
 async function process(target: string, prefix: string, option: Option) {
-  const depsDir = await getCacheDir() + "/deno/deps";
+  const depsDir = (await getDenoDir()) + "/deps";
 
   await Deno.permissions.request({ name: "read" });
   await Deno.permissions.request({ name: "write" });
@@ -121,7 +125,7 @@ async function main(args: string[]): Promise<number> {
     console.log("To use files in <libpath> for <liburl>:");
     console.log("");
     console.log(
-      `  deno run ${scriptName} ./denops-std-deno https://deno.land/x/denops_std@v0.10`,
+      `  deno run ${scriptName} ./denops-std-deno https://deno.land/x/denops_std@v2.0.0`,
     );
     console.log("");
     console.log("USAGE:");
@@ -163,4 +167,6 @@ async function main(args: string[]): Promise<number> {
   return 0;
 }
 
-Deno.exit(await main(Deno.args));
+if (import.meta.main) {
+  Deno.exit(await main(Deno.args));
+}
