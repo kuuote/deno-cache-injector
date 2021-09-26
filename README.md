@@ -1,4 +1,5 @@
-This script will replace JavaScript/TypeScript files in the cache to files in the particular directory.
+This script will replace JavaScript/TypeScript files in the cache to files in
+the particular directory.
 
 # Install
 
@@ -43,4 +44,5 @@ or
 
 # License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE.txt) for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE.txt) for
+details.
