@@ -53,6 +53,8 @@ export async function getDenoDir() {
         Deno.env.get("HOME") + "/.cache") + "/deno";
     case "darwin":
       return Deno.env.get("HOME") + "/Library/Caches/deno";
+    case "windows":
+      return Deno.env.get("LOCALAPPDATA") + "/deno";
   }
 }
 
